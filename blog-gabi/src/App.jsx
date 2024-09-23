@@ -1,35 +1,58 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
-import "./App.css";
+import Header from "./components/Header";
+import Footer from "./components/Footer";
+import { Post } from "./components/Post";
+import { useEffect, useState } from "react";
+import { supabase } from "./supabaseClient";
 
-function App() {
-  const [count, setCount] = useState(0);
+import "./index.css"; // O la ruta correcta a tu archivo CSS
+
+export default function App() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const session = supabase.auth.getSession();
+    setUser(session?.user);
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      switch (event) {
+        case "SIGNED_IN":
+          setUser(session?.user);
+          break;
+        case "SIGNED_OUT":
+          setUser(null);
+          break;
+        default:
+          console.log("caso no estimado");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleLogin = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "github",
+    });
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
 
   return (
     <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      {user ? (
+        <div>
+          <h2>Authenticated</h2>
+          <button onClick={handleLogout}>logout</button>
+        </div>
+      ) : (
+        <button onClick={handleLogin}>login Github</button>
+      )}
     </>
   );
 }
-
-export default App;
